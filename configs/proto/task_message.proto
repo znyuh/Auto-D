@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+// 定义任务执行状态的枚举类型
+enum TaskStatus {
+  PENDING = 0; // 任务尚未执行
+  SUCCESS = 1; // 任务成功
+  FAILURE = 2; // 任务失败
+}
+
+// 定义每个任务的结构
+message Task {
+  string task_name = 1;        // 任务名称，用于区分任务
+  string model_name = 2;       // 模型名称
+  int32 priority = 3;          // 任务优先级
+    TaskStatus status = 4;       // 任务执行状态
+  string error_message = 5;    // 错误信息（仅在 FAILURE 时有效）
+  map<string, string> params = 6; // 变长参数，以键值对的形式表示
+
+}
+
+// 顶层消息，支持多个任务
+message TaskRequest {
+  repeated Task tasks = 1;     // 支持多个任务
+}
