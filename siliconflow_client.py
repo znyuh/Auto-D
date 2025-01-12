@@ -14,7 +14,7 @@ from typing import List, Optional, Any
 
 from utils.visualizer_tool import cprint, ctext
 from utils.parse_proto import TaskQueue, TaskInfo,TaskStatus
-from proto.task_message_pb2 import TaskRequest, Task, TaskStatus
+from proto.task_message_pb2 import TaskRequest
 
 URL = "https://api.siliconflow.cn/v1/chat/completions"
 
@@ -88,9 +88,6 @@ Here are some rules for you to follow:
         return self.prompts.get(category)
 
 
-def necessary_info_check(task_info: TaskInfo):
-    # TODO: 不同任务下的基本必要信息校验函数
-    pass 
 
 def user_interface(uri: str, llm_config: str):
     # uri = "ws://your_websocket_server_url"  # Replace with your WebSocket server URL
@@ -173,12 +170,14 @@ def user_interface(uri: str, llm_config: str):
             )
             # 判断回答是否是规范化的，不是则要求重新回答
             try:
+                # TODO: 对大模型的回答进行解析
                 response_data = json.loads(response)
                 if not all(key in response_data for key in ["intent", "details", "clarifications"]):
                     raise ValueError("Response JSON does not contain all required keys.")
                 if not all(key in response_data["details"] for key in ["task_name", "model_name", "parameters", "task_id"]):
                     raise ValueError("Response JSON 'details' does not contain all required keys.")
             except (json.JSONDecodeError, ValueError) as e:
+                # TODO: 异常处理：大模型回答格式错误处理
                 logger.error(f"Response format error: {e}")
                 # Optionally, you can request a re-evaluation or handle the error as needed
                 continue
@@ -188,17 +187,11 @@ def user_interface(uri: str, llm_config: str):
                 is_completed = False
                 task_request = TaskRequest()
                 task = task_request.tasks.add()
-                task.task_name = response_data["details"]["task_name"]
-                task.model_name = response_data["details"]["model_name"]
-                for key, value in response_data["details"]["parameters"].items():
-                    task.params[key] = value
+                task.base_info_add(response_data["details"])
                 
-                task.task_id = response_data["details"]["task_id"] if "task_id" in response_data["details"] else -1
-                task.priority = response_data["details"]["priority"] if "priority" in response_data["details"] else 0
-                
-                necessary_info_check(task)
+                task.necessary_info_check()
             elif "Supplement" in response_data["intent"]:
-                # 补充任务
+                # TODO: 功能完善：补充任务功能
                 task_info = task_queue.get_task_by_name(response_data["details"]["task_name"])
                 if task_info is not None and task_info.status == TaskStatus.REPLENISHING:
                     task_info.params[response_data["details"]["parameter_name"]] = response_data["details"]["parameter_value"]
@@ -207,7 +200,7 @@ def user_interface(uri: str, llm_config: str):
                 else:
                     # TODO: 异常处理：补充任务无法检索的情况
                     logger.error(f"Task not found: {response_data['details']['task_name']}")
-                necessary_info_check(task_info)
+                task.necessary_info_check()
             elif "Interrupt" in response_data["intent"]:
                 # TODO: 功能补充：中断任务功能
                 pass
