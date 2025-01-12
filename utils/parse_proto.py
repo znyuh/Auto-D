@@ -4,7 +4,7 @@ import json
 from enum import Enum
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
-from proto.task_message_pb2 import TaskRequest, Task, TaskStatus
+from proto.task_message_pb2 import TaskRequest
 
 class TaskStatus(Enum):
     REPLENISHING = 0
@@ -12,17 +12,32 @@ class TaskStatus(Enum):
     RUNNING = 2
     COMPLETED = 3
     FAILED = 4
-    
+
 @dataclass
 class TaskInfo:
     """数据类定义任务信息结构"""
     task_name: str
     model_name: str
-    priority: int
-    params: Dict[str, str] = field(default_factory=dict)
     status: TaskStatus = TaskStatus.REPLENISHING
+    params: Dict[str, str] = field(default_factory=dict)
     error_message: Optional[str] = None
 
+    def base_info_add(self, new_info: Dict):
+        self.task_name = new_info["task_name"]
+        self.model_name = new_info["model_name"]
+        for key, value in new_info["parameters"].items():
+            self.params[key] = value
+        
+        self.task_id = new_info["task_id"] if "task_id" in new_info else -1
+        # self.priority = new_info["priority"] if "priority" in new_info else 0
+    
+    def params_add(self, new_info: Dict):
+        pass
+    
+    def necessary_info_check(self):
+        # TODO: 不同任务下的基本必要信息校验函数
+        pass 
+    
 @dataclass(order=True)
 class PrioritizedTask:
     priority: int
