@@ -1,9 +1,18 @@
 import heapq
+import json
 
-from dataclasses import dataclass, field
+from enum import Enum
 from typing import List, Dict, Optional
+from dataclasses import dataclass, field
 from proto.task_message_pb2 import TaskRequest, Task, TaskStatus
 
+class TaskStatus(Enum):
+    REPLENISHING = 0
+    PENDING = 1
+    RUNNING = 2
+    COMPLETED = 3
+    FAILED = 4
+    
 @dataclass
 class TaskInfo:
     """数据类定义任务信息结构"""
@@ -11,7 +20,7 @@ class TaskInfo:
     model_name: str
     priority: int
     params: Dict[str, str] = field(default_factory=dict)
-    status: str = "PENDING"
+    status: TaskStatus = TaskStatus.REPLENISHING
     error_message: Optional[str] = None
 
 @dataclass(order=True)
@@ -22,14 +31,23 @@ class PrioritizedTask:
 @dataclass
 class TaskQueue:
     tasks: List[PrioritizedTask] = field(default_factory=list)
+    task_map: Dict[str, PrioritizedTask] = field(default_factory=dict)
 
     def enqueue(self, task: TaskInfo, priority: int) -> None:
-        heapq.heappush(self.tasks, PrioritizedTask(priority, task))
+        prioritized_task = PrioritizedTask(priority, task)
+        heapq.heappush(self.tasks, prioritized_task)
+        self.task_map[task.task_name] = prioritized_task
 
     def dequeue(self) -> Optional[TaskInfo]:
         if not self.tasks:
             return None
-        return heapq.heappop(self.tasks).task
+        prioritized_task = heapq.heappop(self.tasks)
+        self.task_map.pop(prioritized_task.task.task_name)  # 从映射中移除
+        return prioritized_task.task
+
+    def get_task_by_name(self, task_name: str) -> Optional[TaskInfo]:
+        prioritized_task = self.task_map.get(task_name)
+        return prioritized_task.task if prioritized_task else None
 
     def is_empty(self) -> bool:
         return len(self.tasks) == 0
@@ -56,6 +74,18 @@ def task_enqueue(serialized_data: bytes, task_queue: TaskQueue) -> List[TaskInfo
             error_message=task.error_message if task.status == TaskStatus.FAILURE else None
         ), int(task.priority))
     return
+
+
+class JSONParser():
+    def parse(self, data: str):
+        return json.loads(data)
+
+    def dynamic_parameter_handling(self, parsed_data, key_to_check):
+        if key_to_check in parsed_data:
+            if parsed_data[key_to_check] == 'type1':
+                return parsed_data.get('param1'), parsed_data.get('param2')
+            elif parsed_data[key_to_check] == 'type2':
+                return parsed_data.get('param3'), parsed_data.get('param4')
 
 # 示例数据
 def create_sample_data():

@@ -2,3 +2,4 @@
 
 # file
 *.pt
+proto/*_pb2.py
