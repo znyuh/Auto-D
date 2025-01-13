@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-
-
 // 定义每个任务的结构
 message Task_base {
   string task_id = 1;          // 任务ID，用于区分任务
