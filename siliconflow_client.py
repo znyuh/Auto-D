@@ -29,6 +29,7 @@ class RequirementAnalysisStatus(Enum):
     
 class PromptSpace:
     def __init__(self):
+        # TODO: 字典的键值能否改成更加规范的格式
         self.prompts = {
             "Prologue": {
                 "role_play": """
@@ -81,6 +82,11 @@ Here are some rules for you to follow:
                 "chat_before": "",
                 "response_format_error": "",
                 "backlink": ""
+            },\
+            "exception_handling_format":{
+                "Missing_Key_In_Parsing_Info": "Response JSON is missing required keys: {}. Please think patiently and provide supported key value information. If the corresponding content does not exist, please set the value of the key to None.",
+                "response_format_error": "The json data format of the answer cannot be parsed normally! The following is the error message: {}. Please think patiently and answer according to the correct json data format.",
+                "backlink": ""
             }
         }
 
@@ -123,7 +129,7 @@ def user_interface(uri: str, llm_config: str):
     for prompt_effect, prompt_content in prompts_plg.items():
         logger.info(f"Prologue phase: {prompt_effect}\n")
 
-        dialogs[0].append({"role": "Narrator", "content": prompt_content})
+        dialogs[0].append({"role": "System", "content": prompt_content})
         response = client.chat.completions.create(
             model=llm_params.get('model_name', 'Qwen/QVQ-72B-Preview'),
             messages=dialogs[0],
@@ -143,7 +149,12 @@ def user_interface(uri: str, llm_config: str):
     prologue_context = copy.deepcopy(dialogs[0])
 
     while True:
+        
+        
         if not user_mq.empty():
+            
+            retry_times = 5
+            
             request_msg = user_mq.get()
 
             logger.info(f"Received message: {request_msg}")
@@ -168,20 +179,37 @@ def user_interface(uri: str, llm_config: str):
                 stop=llm_params.get('stop', ['null']),
                 stream=llm_params.get('stream', False)
             )
-            # 判断回答是否是规范化的，不是则要求重新回答
-            try:
-                # TODO: 对大模型的回答进行解析
-                response_data = json.loads(response)
-                if not all(key in response_data for key in ["intent", "details", "clarifications"]):
-                    raise ValueError("Response JSON does not contain all required keys.")
-                if not all(key in response_data["details"] for key in ["task_name", "model_name", "parameters", "task_id"]):
-                    raise ValueError("Response JSON 'details' does not contain all required keys.")
-            except (json.JSONDecodeError, ValueError) as e:
-                # TODO: 异常处理：大模型回答格式错误处理
-                logger.error(f"Response format error: {e}")
-                # Optionally, you can request a re-evaluation or handle the error as needed
-                continue
-            
+            while retry_times > 0:
+                except_info = None
+                format_error = False
+                try:
+                    response_data = json.loads(response)
+                    required_keys = ["intent", "details", "clarifications"]
+                    missing_keys = [key for key in required_keys if key not in response_data]
+                    if missing_keys:
+                        except_info = prompt_space.get_prompts("exception_handling_format").get("Missing_Key_In_Parsing_Info").format(missing_keys)
+                        format_error = True
+                except json.JSONDecodeError as e:
+                    logger.error(f"Response format error: {e}")
+                    except_info = prompt_space.get_prompts("exception_handling_format").get("response_format_error").format(e)
+                    format_error = True
+
+                if format_error:
+                    retry_times -= 1
+                    dialogs[0].append({"role": "System", "content": except_info})
+                    response = client.chat.completions.create(
+                        model=llm_params.get('model_name', 'Qwen/QVQ-72B-Preview'),
+                        messages=dialogs[0],
+                        max_tokens=llm_params.get('max_tokens', 1024),
+                        temperature=llm_params.get('temperature', 0.7),
+                        top_p=llm_params.get('top_p', 0.7),
+                        top_k=llm_params.get('top_k', 50),
+                        frequency_penalty=llm_params.get('frequency_penalty', 0.5),
+                        n=llm_params.get('n', 1),
+                        stop=llm_params.get('stop', ['null']),
+                        stream=llm_params.get('stream', False)
+                    )
+
             if "Create" in response_data["intent"]:
                 # 填写任务需求单
                 is_completed = False
