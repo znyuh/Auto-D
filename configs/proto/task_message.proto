@@ -2,9 +2,9 @@ syntax = "proto3";
 
 // 定义每个任务的结构
 message Task_base {
-  string task_id = 1;          // 任务ID，用于区分任务
-  string task_name = 2;        // 任务名称，用于区分任务
-  string task_type = 3;        // 任务类型，用于区分任务
+  string task_id = 1;          // 任务ID，用于检索任务
+  string task_type = 2;        // 任务类型，用于任务定性
+  string task_name = 3;        // 任务名称，用于描述任务
   int32 priority = 4;          // 任务优先级（数值越小优先级越高）
   string status = 5;           // 任务状态（如 PENDING, RUNNING, COMPLETED）
   string created_at = 6;       // 任务创建时间
@@ -25,16 +25,11 @@ message TaskFeedback {
 }
 
 message TaskCommand {
-  enum CommandType {
-    START = 0;   // 启动任务
-    STOP = 1;    // 停止任务
-    PAUSE = 2;   // 暂停任务
-    RESUME = 3;  // 恢复任务
-  }
 
   string task_id = 1;          // 任务唯一标识
-  CommandType command = 2;     // 命令类型
-  map<string, string> options = 3;  // 命令选项（如超时时间、重试次数等）
+  string task_type = 2;        // 任务类型
+  string command = 3;         // 命令类型
+  map<string, string> options = 4;  // 命令选项（如超时时间、重试次数等）
 }
 
 message TaskLog {

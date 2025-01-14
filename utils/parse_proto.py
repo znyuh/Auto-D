@@ -11,32 +11,61 @@ class TaskStatus(Enum):
     PENDING = 1
     RUNNING = 2
     COMPLETED = 3
-    FAILED = 4
+    EXCEPTION_FAILED = 4
+    INTERRUPTED_FAILED = 5
+
+class CommandType(Enum):
+    START = 0
+    STOP = 1
+
 
 @dataclass
 class TaskInfo:
     """数据类定义任务信息结构"""
+    task_id: str
     task_name: str
-    model_name: str
+    task_type: str
     status: TaskStatus = TaskStatus.REPLENISHING
     params: Dict[str, str] = field(default_factory=dict)
     error_message: Optional[str] = None
 
     def base_info_add(self, new_info: Dict):
         self.task_name = new_info["task_name"]
-        self.model_name = new_info["model_name"]
         for key, value in new_info["parameters"].items():
             self.params[key] = value
         
         self.task_id = new_info["task_id"] if "task_id" in new_info else -1
         # self.priority = new_info["priority"] if "priority" in new_info else 0
     
+    def base_info_update(self, new_info: Dict):
+        # TODO: 更新任务基本信息
+        pass
+    
     def params_add(self, new_info: Dict):
+        # TODO: 添加参数
         pass
     
     def necessary_info_check(self):
         # TODO: 不同任务下的基本必要信息校验函数
-        pass 
+        pass
+
+@dataclass
+class TaskFeedback:
+    task_id: str
+    status: TaskStatus
+    feedback_message: str
+    end_at: str
+    metrics: Dict[str, str] = field(default_factory=dict)
+
+@dataclass
+class TaskCommand:
+    task_id: str
+    task_type: str
+    command: CommandType
+    options: Dict[str, str] = field(default_factory=dict)
+
+    def command_filling(self, command: CommandType, command_info: Dict):
+        pass
     
 @dataclass(order=True)
 class PrioritizedTask:
