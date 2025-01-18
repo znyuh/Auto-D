@@ -39,7 +39,7 @@ Here are some rules for you to follow:
 4. If the user input is incomplete or ambiguous, proactively ask clarifying questions to gather more details.
 5. You should structure the analyzed result as follows, using the JSON format:
 {
-  "intent": "<Intent Category>",  // e.g., "Create_Tasks", "Supplement_Tasks", "Interrupt_Tasks", "Query_Tasks"
+  "intent": "<Intent Category>",  // e.g., "Create_Tasks", "Supply_Tasks", "Interrupt_Tasks", "Query_Tasks"
   "details": {
     "task_name": "<Task Name>",  // e.g., "Evaluate_model", "Finetune_model", "Infer_model"
     "model_name": "<Model Name>",  // e.g., yolov5s, yolov8n, ... that models should be supported by the system
@@ -65,7 +65,8 @@ Here are some rules for you to follow:
                 "Missing_Key_In_Parsing_Info": "Response JSON is missing required keys: {}. Please think patiently and provide supported key value information. If the corresponding content does not exist, please set the value of the key to None.",
                 "response_format_error": "The json data format of the answer cannot be parsed normally! The following is the error message: {}. Please think patiently and answer according to the correct json data format.",
                 "task_not_found": "", # TODO: 一个置位用来给出任务名称信息
-                "backlink": ""
+                "Error_Intent":"",
+                "backlink": "",
             }
         }
 

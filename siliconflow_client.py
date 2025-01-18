@@ -16,13 +16,13 @@ from utils.visualizer_tool import cprint, ctext
 from utils.parse_proto import TaskQueue, TaskInfo, TaskCommand, TaskFeedback, TaskStatus, CommandType
 from proto.task_message_pb2 import TaskRequest
 from utils.prompt_space import RequirementAnalysisStatus, PromptSpace
+from layer.ru import RequirementUnderstandingLayer
 
 URL = "https://api.siliconflow.cn/v1/chat/completions"
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 
 def user_interface(uri: str, llm_config: str):
@@ -141,55 +141,55 @@ def user_interface(uri: str, llm_config: str):
                 task = task_request.tasks.add()
                 task.base_info_add(response_data["details"])
                 task.necessary_info_check()
-            elif "Supplement" in response_data["intent"]:
+            elif "Supply" in response_data["intent"]:
                 # TODO: 功能完善：补充任务功能
                 task_info = task_queue.get_task_by_name(response_data["details"]["task_name"])
                 if task_info is not None:
                     if task_info.status == TaskStatus.REPLENISHING or task_info.status == TaskStatus.FAILED:
                         task_info.base_info_update(response_data["details"])
-                        task_info.status = TaskStatus.REPLENISHING
                         task_info.necessary_info_check()
                     else:
-                        # TODO: 
-                        pass
+                        logger.info("Task is not in replenishing or failed status, no need to supply.")
                 else:
                     # TODO: 异常处理：补充任务无法检索的情况
                     except_info = prompt_space.get_prompts("exception_handling_format").get("task_not_found").format(response_data["details"]["task_name"])
-                    cprint(f"Task not found: {response_data['details']['task_name']}. Please check the task name.") # 反馈给用户
-                    logger.error(f"Task not found: {response_data['details']['task_name']}")
-                    
+                    cprint(f"[Supply] Task not found: {response_data['details']['task_name']}. Please check the task name.") 
+                    logger.error(f"[Supply] Task not found: {response_data['details']['task_name']}")
+
             elif "Interrupt" in response_data["intent"]:
                 task_info = task_queue.get_task_by_name(response_data["details"]["task_name"])
                 if task_info is not None and task_info.status == TaskStatus.RUNNING:
-                    
+
                     task_command = TaskCommand()
                     task_command.command_filling(CommandType.STOP, response_data["details"])
                 elif task_info is not None:
-                    # TODO: 异常处理：中断任务无法检索的情况
                     except_info = prompt_space.get_prompts("exception_handling_format").get("task_not_found").format(response_data["details"]["task_name"])
-                    cprint(f"Task not found: {response_data['details']['task_name']}. Please check the task name.") # 反馈给用户
-                    logger.error(f"Task not found: {response_data['details']['task_name']}")
+                    cprint(f"[Interrupt] Task not found: {response_data['details']['task_name']}. Please check the task name.") 
+                    logger.error(f"[Interrupt] Task not found: {response_data['details']['task_name']}")
                 else:
-                    pass
-                
+                    cprint(f"[Interrupt] Task not Running: {response_data['details']['task_name']}. Please check the task status.") 
+                    logger.warning(f"[Interrupt] Task not Running: {response_data['details']['task_name']}. Please check the task status.")
+
             elif "Query" in response_data["intent"]:
                 task_info = task_queue.get_task_by_name(response_data["details"]["task_name"])
                 if task_info is not None:
-                    # TODO: 功能补充：查询任务功能
-                    pass
+                    task_info.info_query()
                 else:
-                    # TODO: 异常处理：查询任务无法检索的情况
                     except_info = prompt_space.get_prompts("exception_handling_format").get("task_not_found").format(response_data["details"]["task_name"])
-                    cprint(f"Task not found: {response_data['details']['task_name']}. Please check the task name.") # 反馈给用户
-                    logger.error(f"Task not found: {response_data['details']['task_name']}")
+                    cprint(f"[Query] Task not found: {response_data['details']['task_name']}. Please check the task name.") 
+                    logger.error(f"[Query] Task not found: {response_data['details']['task_name']}")
             else:
                 # TODO: 异常处理：其他命令处理
-                logger.info(f"Unknown intent: {response_data['intent']}")
+                except_info = prompt_space.get_prompts("exception_handling_format").get("Error_Intent").format(response_data["intent"])
+                cprint(f"[Error] Unknown intent: {response_data['intent']}. Please check the intent.") 
+                logger.error(f"[Error] Unknown intent: {response_data['intent']}")
 
             # TODO: 给用户输入进行反馈
 
             # TODO: 保留正确的对话内容，进行下一次对话
             dialogs[0].append({"role": "assisstant", "content": response})
+
+
 
 def main():
     pass
