@@ -48,6 +48,10 @@ class TaskInfo:
     def necessary_info_check(self):
         # TODO: 不同任务下的基本必要信息校验函数
         pass
+    
+    def info_query(self):
+        # TODO: 任务信息查询函数
+        pass
 
 @dataclass
 class TaskFeedback:

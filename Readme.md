@@ -1,7 +1,7 @@
 # Auto-D: Automatic Pipeline for Simple Model Deployment
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Python Version](https://img.shields.io/badge/python-3.7%2B-green)
+![Python Version](https://img.shields.io/badge/python-3.10%2B-green)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange)
 
 Auto-D is an **automatic pipeline** designed to simplify the deployment of machine learning models. Whether you're a data scientist, ML engineer, or developer, Auto-D provides a seamless and efficient way to deploy your models with minimal effort.
