@@ -108,37 +108,8 @@ class RequirementUnderstandingLayer:
         # query = "SELECT * FROM tasks WHERE " + " OR ".join(["task LIKE ?"] * len(keywords))
         # cursor.execute(query, tuple('%' + keyword + '%' for keyword in keywords))
         # return cursor.fetchall()
-
-    def log_interaction(self, user_input: str, llm_response: str):
-        """
-        Log the user interaction and LLM response to the database.
-        """
-        cursor = self.db_connection.cursor()
-        cursor.execute("INSERT INTO interactions (user_input, llm_response) VALUES (?, ?)", (user_input, llm_response))
-        self.db_connection.commit()
-        
-    def log_task_info(self, task_info: dict):
-        """
-        Log the task information to the database.
-        """
-        cursor = self.db_connection.cursor()
-        cursor.execute("INSERT INTO tasks (task, details) VALUES (?, ?)", (task_info["task"], task_info["details"]))
-        self.db_connection.commit()
-
-    def process_queue(self):
-        
-        while True:
-            if not self.input_queue.empty():
-                user_input = self.input_queue.get()
-                processed_data = self.send_to_llm(user_input, 0)
-                knowledge_data = self.query_knowledge_base(user_input, 1)
-                if knowledge_data:
-                    processed_data = self.enhance_task_description(processed_data, knowledge_data)
-                
-                self.log_interaction(user_input, processed_data)
-                self.tdd.append(self.create_tdd(processed_data, knowledge_data))
-                
-
+        return None
+    
     def enhance_task_description(self, llm_output: str, knowledge_data: list) -> str:
         """
         Enhance the task description using knowledge base data.
@@ -147,6 +118,20 @@ class RequirementUnderstandingLayer:
         for entry in knowledge_data:
             enhanced_description += f"\nRelated Task: {entry[1]}, Details: {entry[2]}"
         return enhanced_description
+    
+    def process_queue(self):
+        
+        while True:
+            if not self.input_queue.empty():
+                user_input = self.input_queue.get()
+                processed_data = self.send_to_llm(user_input, 0)
+                knowledge_data = self.query_knowledge_base(user_input, 1)
+                if knowledge_data is not None:
+                    processed_data = self.enhance_task_description(processed_data, knowledge_data)
+                
+                self.log_interaction(user_input, processed_data)
+                self.tdd.append(self.create_tdd(processed_data, knowledge_data))
+
 
     def create_tdd(self, llm_output: str, knowledge_data: list) -> dict:
         """TODO: 待完善：1. tdd的格式以及内容需要再次确认，2. 将tdd每个完整任务信息保存到数据库
@@ -171,7 +156,6 @@ class RequirementUnderstandingLayer:
         retry_times = self.ru_config.get('retry_times', 5)
         while retry_times > 0:
             except_info = None
-            format_error = False
             try:
                 if except_info is not None:
                     self.dialogs[dialogs_id].append({"role": "user", "content": except_info})
@@ -207,4 +191,22 @@ class RequirementUnderstandingLayer:
                 except_info = self.prompt_space.get_prompts("exception_handling_format").get("response_format_error").format(e)
                 retry_times -= 1
                 
-        return formated_response
+        # TODO: 需要给用户反馈当前输入失败的情况
+        
+        return {}
+
+    def log_interaction(self, user_input: str, llm_response: str):
+        """
+        Log the user interaction and LLM response to the database.
+        """
+        cursor = self.db_connection.cursor()
+        cursor.execute("INSERT INTO interactions (user_input, llm_response) VALUES (?, ?)", (user_input, llm_response))
+        self.db_connection.commit()
+        
+    def log_task_info(self, task_info: dict):
+        """
+        Log the task information to the database.
+        """
+        cursor = self.db_connection.cursor()
+        cursor.execute("INSERT INTO tasks (task, details) VALUES (?, ?)", (task_info["task"], task_info["details"]))
+        self.db_connection.commit()
